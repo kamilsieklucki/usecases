@@ -6,7 +6,7 @@ subject <- "Hello from R"
 
 body <- list(
   # optional template
-  # mime_part("C:/Users/ksieklucki/Desktop/test.html", type="text/html", disposition="inline"),
+  # mime_part("path_to_html", type="text/html", disposition="inline"),
   mime_part(iris)
 )
 
