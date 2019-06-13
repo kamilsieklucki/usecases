@@ -43,3 +43,6 @@ DF %>% select(cut, color)
 DF %>% select(-cut, -color)
 
 # agregacja danych
+DT[, .(suma_x = sum(x, na.rm = TRUE))]
+
+DF %>% summarise(suma_x = sum(x, na.rm = TRUE))
