@@ -44,5 +44,7 @@ DF %>% select(-cut, -color)
 
 # agregacja danych
 DT[, .(suma_x = sum(x, na.rm = TRUE))]
+uniqueN(DT[, .(cut)])
 
 DF %>% summarise(suma_x = sum(x, na.rm = TRUE))
+n_distinct(DF %>% select(cut))
