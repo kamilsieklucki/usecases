@@ -108,7 +108,91 @@ df %>% group_by(am) %>% summarise_at(vars(cyl, gear), list(min, max))
 
 dt[, c(lapply(.SD, min), lapply(.SD, max)), .SDcols = c("cyl", "gear"), keyby = am]
 
+# summarise_if ----
+summarise_if(df, nchar(names(df)) == 2, mean)
 
+cols <- names(dt)[nchar(names(dt)) == 2]
+dt[, lapply(.SD, mean),
+   .SDcols = cols]
 
+# mutate_all ----
+mutate_all(df, as.integer)
 
+dt[, lapply(.SD, as.integer)]
+
+# analogicznie reszta przypadków
+
+# arrange ----
+df <- df %>% arrange(cyl)
+
+setkey(dt, cyl)
+setindex(dt, cyl)
+
+setorder(dt, mpg)
+
+# In data.table, set*() functions modify objects by reference, making these operations fast and memory-efficient. In case this is not a desired behaviour, users can use copy(). The corresponding expressions in dplyr will be less memory-efficient.
+
+# set(*) ----
+# rename ----
+setnames(dt, old = "mpg", new = "test")
+setnames(dt, old = "test", new = "mpg")
+
+# reorder ----
+setcolorder(dt, c("carb", "wt", "disp"))
+
+# Advanced
+# Get row number of first (and last) observation by group ----
+dt[, .I[c(1, .N)], by = cyl]
+
+# suma + poziom wyżej ----
+dt[,
+   .(SumV2 = sum(mpg)),
+   keyby = c("cyl", "gear")]
+
+rollup(dt,
+       .(SumV2 = sum(mpg)),
+       by = c("cyl", "gear"))
+
+# Read and rbind several files ----
+rbindlist(lapply(c("DT.csv", "DT.csv"), fread))
+
+# JOINS ----
+x <- data.table(Id  = c("A", "B", "C", "C"),
+                X1  = c(1L, 3L, 5L, 7L),
+                XY  = c("x2", "x4", "x6", "x8"),
+                key = "Id")
+
+y <- data.table(Id  = c("A", "B", "B", "D"),
+                Y1  = c(1L, 3L, 5L, 7L),
+                XY  = c("y1", "y3", "y5", "y7"),
+                key = "Id")
+
+# left join x <- y
+y[x, on = "Id"]
+left_join(x, y, by = "Id")
+
+# right join x -> y
+x[y, on = "Id"]
+right_join(x, y, by = "Id")
+
+# inner join
+x[y, on = "Id", nomatch = 0]
+inner_join(x, y, by = "Id")
+
+# full join
+merge(x, y, all = TRUE, by = "Id")
+full_join(x, y, by = "Id")
+
+# semi_join
+unique(x[y$Id, on = "Id", nomatch = 0])
+semi_join(x, y, by = "Id")
+
+# anti_join
+x[!y, on = "Id"]
+anti_join(x, y, by = "Id")
+
+# Non-equi joins ----
+z <- data.table(ID = "C", Z1 = 5:9, Z2 = paste0("z", 5:9))
+
+x[z, on = .(Id == ID, X1 <= Z1)]
 
