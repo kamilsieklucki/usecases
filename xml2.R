@@ -32,14 +32,11 @@ substytucje <- asy0 %>%
   unnest() %>%
   unnest()
 
-substytucje %>%
+substytycje2 <- substytucje %>%
   mutate(
     MATERIAL = as.integer(MATERIAL),
     INDEKS = as.integer(INDEKS),
     DATA_OD = as.Date(DATA_OD, "%Y.%m.%d"),
     DATA_DO = as.Date(DATA_DO, "%Y.%m.%d")
-  ) %>%
-  skimr::skim()
-filter(INDEKS == 706)
-
+  )
 
