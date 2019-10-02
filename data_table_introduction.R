@@ -53,3 +53,32 @@ ans <- flights[carrier == "AA",
                .(mean(arr_delay), mean(dep_delay)),
                by = .(origin, dest, month)]
 # Grouping using by - grouping variables are sorted
+ans <- flights[carrier == "AA",
+               .(mean(arr_delay), mean(dep_delay)),
+               keyby = .(origin, dest, month)]
+# Chaining
+ans <- flights[carrier == "AA", .N, by = .(origin, dest)][order(origin, -dest)]
+# Expressions in by
+ans <- flights[, .N, .(dep_delay>0, arr_delay>0)]
+# Multiple columns in j - .SD
+# data.table provides a special symbol, called .SD. It stands for Subset of Data. It by itself is a data.table that holds the data for the current group defined using by.
+# specify just the columns we would like to compute on using the argument .SDcols. It accepts either column names or column indices.
+ans <- flights[carrier == "AA",                       ## Only on trips with carrier "AA"
+               lapply(.SD, mean),                     ## compute the mean
+               by = .(origin, dest, month),           ## for every 'origin,dest,month'
+               .SDcols = c("arr_delay", "dep_delay")] ## for just those specified in .SDcols
+
+# Subset .SD for each group:
+# – How can we return the first two rows for each month?
+ans <- flights[, head(.SD, 2), by = month]
+
+DT = data.table(
+  ID = c("b","b","b","a","a","c"),
+  a = 1:6,
+  b = 7:12,
+  c = 13:18
+)
+# – How can we concatenate columns a and b for each group in ID?
+DT[, .(val = c(a,b)), by = ID]
+# – What if we would like to have all the values of column a and b concatenated, but returned as a list column?
+DT[, .(val = list(c(a,b))), by = ID]
