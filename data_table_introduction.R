@@ -8,7 +8,7 @@ input <- if (file.exists("flights14.csv")) {
 flights <- fread(input)
 
 str(flights)
-
+# PART 1--------------------------------------------------------------
 # subset logical
 ans <- flights[origin == "JFK" & month == 6L]
 # subset position
@@ -82,3 +82,84 @@ DT = data.table(
 DT[, .(val = c(a,b)), by = ID]
 # – What if we would like to have all the values of column a and b concatenated, but returned as a list column?
 DT[, .(val = list(c(a,b))), by = ID]
+
+# PART 2--------------------------------------------------------------
+# Add columns by reference
+flights[, `:=`(speed = distance / (air_time/60), # speed in mph (mi/h)
+               delay = arr_delay + dep_delay)]   # delay in minutes
+head(flights)
+flights[, c("speed", "delay") := list(distance/(air_time/60), arr_delay + dep_delay)] # lub tak
+# Update some rows of columns by reference - sub-assign by reference
+flights[hour == 24L, hour := 0L][] # [] na końcu wyświetla wynik na konsoli
+# Delete column by reference
+flights[, c("delay") := NULL]
+flights[, `:=`(delay = NULL)]
+# := along with grouping using by
+flights[, max_speed := max(speed), by = .(origin, dest)] # ala mutate na group_by
+# Multiple columns and :=
+in_cols  = c("dep_delay", "arr_delay")
+out_cols = c("max_dep_delay", "max_arr_delay")
+flights[, c(out_cols) := lapply(.SD, max), by = month, .SDcols = in_cols]
+# RHS gets automatically recycled to length of LHS - multiple delete cols
+flights[, c("speed", "max_speed", "max_dep_delay", "max_arr_delay") := NULL]
+head(flights)
+# := and copy() ----
+# := for its side effect
+foo <- function(DT) {
+  DT[, speed := distance / (air_time/60)] # add speed to table
+  DT[, .(max_speed = max(speed)), by = month] # return result max speed per month
+}
+ans = foo(flights)
+head(flights)
+ans
+flights[, speed := NULL] # delete
+# The copy() function
+# we wouldn’t want to update the original object. We can accomplish this using the function copy().
+# The copy() function deep copies the input object and therefore any subsequent update by reference operations performed on the copied object will not affect the original object.
+foo <- function(DT) {
+  DT <- copy(DT)                              ## deep copy
+  DT[, speed := distance / (air_time/60)]     ## doesn't affect 'flights'
+  DT[, .(max_speed = max(speed)), by = month]
+} # jw ale nie zmienia bazowej ramki danych
+ans <- foo(flights)
+head(flights)
+head(ans)
+# przykład z copy i nazwami kolumn
+DT = data.table(x = 1L, y = 2L)
+DT_n = names(DT)
+DT_n
+## add a new column by reference
+DT[, z := 3L]
+## DT_n also gets updated
+DT_n
+## use `copy()`
+DT_n = copy(names(DT))
+DT[, w := 4L]
+## DT_n doesn't get updated
+DT_n
+
+# PART 3--------------------------------------------------------------
+# Set, get and use keys on a data.table
+setkey(flights, origin)
+setkeyv(flights, "origin") # useful to program with
+# You can also set keys directly when creating data.tables using the data.table() function using key argument. It takes a character vector of column names.
+# Once you key a data.table by certain columns, you can subset by querying those key columns using the .() notation in i. Recall that .() is an alias to list().
+flights[.("JFK")]
+flights[J("JFK")]
+flights[list("JFK")]
+flights["JFK"] # dla pojedynczej
+flights[c("JFK", "LGA")]
+flights[.(c("JFK", "LGA"))]
+# How can we get the column(s) a data.table is keyed by?
+key(flights)
+# Keys and multiple columns
+setkey(flights, origin, dest)
+setkeyv(flights, c("origin", "dest"))
+key(flights)
+# Subset all rows using key columns where first key column origin matches “JFK” and second key column dest matches “MIA”
+flights[.("JFK", "MIA")]
+# Subset all rows where just the first key column origin matches “JFK”
+flights[.("JFK")]
+# Subset all rows where just the second key column dest matches “MIA”
+flights[.(unique(origin), "MIA")] # We can not skip the values of key columns before. Therefore we provide all unique values from key column origin.
+
