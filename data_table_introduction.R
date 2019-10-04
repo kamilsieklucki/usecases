@@ -162,4 +162,36 @@ flights[.("JFK", "MIA")]
 flights[.("JFK")]
 # Subset all rows where just the second key column dest matches “MIA”
 flights[.(unique(origin), "MIA")] # We can not skip the values of key columns before. Therefore we provide all unique values from key column origin.
-
+# Select in j
+flights[.("LGA", "TPA"), .(arr_delay)]
+flights[.("LGA", "TPA"), "arr_delay", with = FALSE]
+# Chaining
+flights[.("LGA", "TPA"), .(arr_delay)][order(-arr_delay)]
+# Compute or do in j
+flights[.("LGA", "TPA"), max(arr_delay)]
+# sub-assign by reference using := in j
+flights[, sort(unique(hour))]
+setkey(flights, hour)
+key(flights)
+flights[.(24), hour := 0L]
+key(flights)
+flights[, sort(unique(hour))]
+# Aggregation using by
+setkey(flights, origin, dest)
+key(flights)
+ans <- flights["JFK", max(dep_delay), keyby = month]
+head(ans)
+key(ans)
+# The mult argument - We can choose, for each query, if “all” the matching rows should be returned, or just the “first” or “last” using the mult argument.
+flights[.("JFK", "MIA"), mult = "first"]
+flights[.(c("LGA", "JFK", "EWR"), "XNA"), mult = "last"]
+# COMMENT: Once again, the query for second key column dest, “XNA”, is recycled to fit the length of the query for first key column origin, which is of length 3.
+# The nomatch argument - We can choose if queries that do not match should return NA or be skipped altogether using the nomatch argument.
+flights[.(c("LGA", "JFK", "EWR"), "XNA"), mult = "last", nomatch = NULL]
+# binary search vs vector scans - pierwsza metoda jest dużo szybsza i jest używana nawet, gdy stosujemy standardowe filtrowanie dlatego trzeba wyczyścić klucz jeżeli chcemy je stosować
+# key by origin,dest columns
+flights[.("JFK", "MIA")]
+flights[origin == "JFK" & dest == "MIA"]
+setkey(flights, NULL)
+flights[origin == "JFK" & dest == "MIA"]
+# COMMENT: warto przeczytać tą część teorytyczną, aby wiedzieć jak to działa !!!
