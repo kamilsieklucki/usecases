@@ -305,3 +305,21 @@ DT.m2
 
 DT.c2 = dcast(DT.m2, family_id + age_mother ~ variable, value.var = c("dob", "gender"))
 DT.c2
+
+# DODATEK ----
+# summarise_all, at, if ----
+flights[,
+        c(lapply(.SD, max)),
+        keyby = .(year, month)] # lub c("year", "month")
+
+flights[,
+        c(lapply(.SD, min), lapply(.SD, max)),
+        .SDcols = c("arr_delay", "dep_delay"),
+        keyby = .(year, month)]
+
+cols <- names(flights)[unlist(lapply(flights, is.numeric))]
+flights[,
+        c(lapply(.SD, mean), lapply(.SD, median)),
+        .SDcols = cols]
+
+# mutate_all, at, if
