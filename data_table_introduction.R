@@ -323,3 +323,12 @@ flights[,
         .SDcols = cols]
 
 # mutate_all, at, if
+flights[, lapply(.SD, as.numeric)]
+
+in_cols  = c("dep_delay", "arr_delay")
+out_cols = c("max_dep_delay", "max_arr_delay")
+flights[, c(out_cols) := lapply(.SD, max), by = month, .SDcols = in_cols]
+
+cols <- names(flights)[!sapply(flights, is.numeric)]
+flights[, (cols) := lapply(.SD, nchar),
+   .SDcols = cols]
