@@ -105,6 +105,20 @@ flights[, c(out_cols) := lapply(.SD, max), by = month, .SDcols = in_cols]
 flights[, c("speed", "max_speed", "max_dep_delay", "max_arr_delay") := NULL]
 head(flights)
 
+# UWAGA - odwołanie się do nowoutworzonej zmiennej!!! ----
+x <- mtcars
+setDT(x)
+
+x %>%
+  mutate(
+    test = 2,
+    test2 = test ^2
+  ) %>% 
+  head()
+
+x[,`:=`(test = 2, test2 = test ^ 2)] # nie działa!!!
+x[,`:=`(test = test <- 2, test2 = test ^ 2)][, head(.SD)] # obejście tego problemu
+
 ################### := and copy() ----
 # := for its side effect
 foo <- function(DT) {
@@ -332,3 +346,41 @@ flights[, c(out_cols) := lapply(.SD, max), by = month, .SDcols = in_cols]
 cols <- names(flights)[!sapply(flights, is.numeric)]
 flights[, (cols) := lapply(.SD, nchar),
    .SDcols = cols]
+
+# UWAGA - nadawanie nowych nazw zmiennym---- 
+# x zdefiniowany w poprzedniej uwadze
+cols = c("hp", "wt", "disp")
+x[, lapply(.SD, mean), by=.(am, vs), .SDcols = cols] %>% 
+  setnames(cols, sprintf("mean_%s", cols)) %>% print
+# setattr is a general function for altering attributes of a vector or other object (see ?attributes).
+
+# UWAGA - zmiana kolejności kolumn ----
+(DT <- data.table(x = letters[1:5], matrix(1:15,5) > 7))
+DT[, id := 1:.N][]
+setcolorder(DT, c("id", setdiff(names(DT), "id")))[]
+setcolorder(DT, "id")[] # id na początku a potem pozostałe
+
+# UWAGA - zmiana nazw kolumn
+(DT = data.table(id = 1:5, x = letters[1:5], matrix(1:15,5) > 7))
+setnames(DT, c("V3", "id"), c("last", "ID"))[]
+
+
+# JOINS ----
+a = data.table(id = c(1L, 1L, 2L, 3L, NA_integer_), t = c(1L, 2L, 1L, 2L, NA_integer_), x = 11:15)
+b = data.table(id = 1:2, y = c(11L, 15L))
+# Equi joins
+a[b, on=.(id)] # dplyr::right_join(a, b, by = "id") lub dplyr::left_join(b, a, by = "id")
+b[a, on=.(id)] # dplyr::right_join(b, a, by = "id") lub dplyr::left_join(a, b, by = "id")
+a[b, on=.(x = y)] # dplyr::right_join(a, b, by = c("x" = "y")) lub dplyr::left_join(b, a, by = c("y" = "x"))
+a[b, on=.(id, x = y)]
+# When merging on columns with different names, they must be written in on= like x = y where x is from the “left” table, and y from the “right” one. Because we are using i to lookup rows in x, the displayed column will have its name from x and its values from i.
+# A character vector also works in, e.g., on=c("id", x = "y"), making it easier to merge programmatically.
+
+# Subset lookup
+a[.(1L), on=.(id)]
+
+# Aggregating in a join
+a[b, on=.(id), sum(x), by=.EACHI]
+# Beware DT[i,on=,j,by=bycols]. Just to repeat: only by=.EACHI works in a join. Typing other by= values there will cause i’s columns to become unavailable.
+
+# Updating in a join
