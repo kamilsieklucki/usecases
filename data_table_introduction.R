@@ -384,3 +384,47 @@ a[b, on=.(id), sum(x), by=.EACHI]
 # Beware DT[i,on=,j,by=bycols]. Just to repeat: only by=.EACHI works in a join. Typing other by= values there will cause i’s columns to become unavailable.
 
 # Updating in a join
+b[, sumx := 
+    a[b, on=.(id), sum(x), by=.EACHI]$V1
+  ]
+
+b[, sumx := 
+    a[.SD, on=.(id), sum(x), by=.EACHI]$V1
+  ] # alternatywnie ten sam wynik
+
+a[b, on=.(id), y := i.y ]
+# The i.* prefix in i.y indicates that we are taking the column from the i table in x[i]. We can similarly use an x.* prefix for columns from x.
+
+# Self join to fill in missing levels
+a = data.table(id = c(1L, 1L, 2L, 3L, NA_integer_), t = c(1L, 2L, 1L, 2L, NA_integer_), x = 11:15)
+a[CJ(id = id, t = t, unique=TRUE), on=.(id, t)]
+
+# Handling multiply-matched rows
+a = data.table(id = c(1L, 1L, 2L, 3L, NA_integer_), t = c(1L, 2L, 1L, 2L, NA_integer_), x = 11:15)
+b = data.table(id = 1:2, y = c(11L, 15L))
+a[b, on=.(id), mult="first"]
+
+# Handling unmatched rows
+b[a, on=.(id), nomatch=0]
+b[a, on=.(id), .N, by=.EACHI]. # ile się poparowało
+
+# Handling imperfect matches with rolling joins
+## Sometimes we want unmatched rows paired with the closest match occurring earlier or later in the table:
+myxDT = list(myx = c(5L, 10L, 15L, 20L)) # target x
+a[myxDT, on=.(x = myx), .(i.myx, x.x)] # exact match (equi-join)
+a[myxDT, on=.(x = myx), roll="nearest", .(i.myx, x.x)] # nearest match
+a[myxDT, on=.(x = myx), roll=-3, .(i.myx, x.x)] # upward match within 3
+## Recall the i.* and x.* prefixes refer to where columns come from in x[i].
+## When joining on multiple columns, the roll is taken on the last column listed in on=.
+## The value of roll= refers to how much higher or lower the value of x can be and still qualify as a match. We add (up to) roll to the target row if necessary to find a match. So roll = -3 means we would accept a x as far away as x - 3 = myx.
+
+# Non-equi joins - It is sometimes useful to match on a range of values
+## To do this, we explicitly name all columns in i and define inequalities in on=
+mDT = data.table(id = 1:3, x_dn = 10L, x_up = 13L)
+a[mDT, on=.(id, x >= x_dn, x <= x_up), .(id, i.x_dn, i.x_up, x.x)]
+
+# Anti joins - We also have the option of selecting unmatched rows with !
+a[!b, on=.(id)]
+
+
+
