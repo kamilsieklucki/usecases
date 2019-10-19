@@ -426,5 +426,5 @@ a[mDT, on=.(id, x >= x_dn, x <= x_up), .(id, i.x_dn, i.x_up, x.x)]
 # Anti joins - We also have the option of selecting unmatched rows with !
 a[!b, on=.(id)]
 
-
-
+# Semi joins
+unique(a[.(b$id), on=.(id), nomatch = 0])
