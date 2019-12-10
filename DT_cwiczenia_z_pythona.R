@@ -84,8 +84,11 @@ flights_planes2 <- merge(flights, planes, by = "tailnum", all.x = TRUE)
 flights[planes, on = 'tailnum', manufacturer := i.manufacturer] 
 
 cols <- colnames(planes)[3:4]
-(cols2 <- paste0("i.",cols))
-flights[planes, on = 'tailnum', (cols) := .(i.type, i.manufacturer)] 
+cols2 <- cols
+flights2[planes, on = 'tailnum', (cols2) := .(i.type, i.manufacturer)] 
+
+# https://stackoverflow.com/questions/28889057/update-a-column-of-nas-in-one-data-table-with-the-value-from-a-column-in-another
+flights[, (cols) := planes[.SD, ..cols, on = "tailnum"]]
 
 # zad 11.22
 flights_airports <- airports[flights, on = c("faa" = "dest")]
