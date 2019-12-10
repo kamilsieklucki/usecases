@@ -110,3 +110,4 @@ flights_all <- airports[
     ], on = "tailnum"
   ], on = c("faa" = "dest")
 ]
+
