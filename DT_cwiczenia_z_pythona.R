@@ -80,15 +80,20 @@ fsetdiff(A, B)
 flights_planes <- planes[flights, on = "tailnum"]
 flights_planes2 <- merge(flights, planes, by = "tailnum", all.x = TRUE)
 
-# update by reference join
+# update by reference join ----------------------------------------------------------------------------------------------------------
+# 1: one column
 flights[planes, on = 'tailnum', manufacturer := i.manufacturer] 
 
+# 2: many columns write by hand
 cols <- colnames(planes)[3:4]
-cols2 <- cols
-flights2[planes, on = 'tailnum', (cols2) := .(i.type, i.manufacturer)] 
+flights[planes, on = 'tailnum', (cols) := .(i.type, i.manufacturer)] 
 
+# 3: many columns choose by character vector
 # https://stackoverflow.com/questions/28889057/update-a-column-of-nas-in-one-data-table-with-the-value-from-a-column-in-another
+cols <- colnames(planes)[3:4]
 flights[, (cols) := planes[.SD, ..cols, on = "tailnum"]]
+# flights[, (cols) := planes[.SD, .(manufacturer, type), on = "tailnum"]]
+# -----------------------------------------------------------------------------------------------------------------------------------
 
 # zad 11.22
 flights_airports <- airports[flights, on = c("faa" = "dest")]
