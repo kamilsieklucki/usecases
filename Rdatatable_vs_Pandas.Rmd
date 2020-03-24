@@ -1,0 +1,96 @@
+---
+title: "R vs Pandas"
+date: "24 03 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::knit_engines$set(python = reticulate::eng_python)
+```
+
+# Rdatatable
+
+```{r}
+library(data.table)
+
+url <- "https://vincentarelbundock.github.io/Rdatasets/csv/datasets/HairEyeColor.csv"
+
+dt <- fread(url)
+
+class(dt)
+
+names(dt)
+
+str(dt)
+
+dim(dt)
+
+nrow(dt)
+
+ncol(dt)
+
+head(dt)
+
+tail(dt)
+
+summary(dt)
+
+# get first three rows
+dt[1:3]
+
+# filter
+dt[Hair == "Black"]
+
+setkey(dt, Hair)
+dt["Black"]
+
+dt[Hair == "Black" & Sex == "Male"]
+
+setkey(dt, Hair, Sex)
+dt[.("Black", "Male")]
+```
+
+# Pandas
+
+```{python}
+import pandas as pd
+
+url = "https://vincentarelbundock.github.io/Rdatasets/csv/datasets/HairEyeColor.csv"
+
+df = pd.read_csv(url)
+
+type(df)
+
+list(df)
+
+df.dtypes
+
+df.shape
+
+len(df.index)
+
+len(df.columns)
+
+df.head()
+
+df.tail()
+
+df.describe()
+
+# get first three rows
+df[0:3]
+df.iloc[:3]
+
+# filter
+df[df.Hair == "Black"]
+
+df[df["Hair"] == "Black"]
+
+df.query("Hair == 'Black'")
+
+df[(df['Hair'] == 'Black') & (df['Sex'] == 'Male')]
+
+df.query("Hair == 'Black' & Sex == 'Male'")
+```
+
