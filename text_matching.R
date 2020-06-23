@@ -1,5 +1,6 @@
 library(fuzzyjoin)
 library(dplyr)
+library(pool)
 
 lokalizacja <- "N:/Rshiny/DAIRRKDT/"
 
