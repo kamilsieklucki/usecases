@@ -11,11 +11,11 @@ Pitching[ , .SD]
 Pitching[ , .SD, .SDcols = c('W', 'L', 'G')] # analogicznie Pitching[, .(W, L, G)]
 
 # sprawdzenie które kolumny są typu znakowego ----
+fkt <- c('teamIDBR', 'teamIDlahman45', 'teamIDretro')
 Teams[ , lapply(.SD, is.character), .SDcols = fkt]
 
 # zamiana typów kolumn ----
 ## zmienną fkt trzeba otoczyć nawiasami () by zmusić data.table by rozumiała ją jako nazwy kolumn
-fkt <- c('teamIDBR', 'teamIDlahman45', 'teamIDretro')
 Teams[ , (fkt) := lapply(.SD, as.factor), .SDcols = fkt]
 
 # akceptuje też pozycję kolumny ----
