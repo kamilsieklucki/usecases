@@ -23,7 +23,7 @@ dbGetQuery(sc, "SELECT count(*) FROM mtcars")
 library(dplyr)
 count(cars)
 
-# In general, we usually start by analyzing data in Spark with dplyr, followed by sampling rows and selecting a subset of the available columns.
+# In general, we usually start by analyzing data in Spark with dplyr, followed by sampling rows and selecting a subset of the available columns.----
 # The last step is to collect data from Spark to perform further data processing in R, like data visualization.
 cars %>% 
   select(hp, mpg) %>%
@@ -40,3 +40,10 @@ model %>%
   full_join(select(cars, hp, mpg)) %>%
   collect() %>%
   plot()
+
+# zapis do csv ----
+spark_write_csv(cars, "cars.csv")
+
+# odczyt z csv ----
+cars <- spark_read_csv(sc, "cars.csv")
+
