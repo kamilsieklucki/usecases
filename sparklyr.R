@@ -101,3 +101,8 @@ spark_disconnect(sc)
 
 # you can also disconnect all your Spark connections by running this command:
 spark_disconnect_all()
+
+# Analysis ----
+# The sparklyr package aids in using the “push compute, collect results” principle. Most of its functions are wrappers on top of Spark API calls.
+# This allows us to take advantage of Spark’s analysis components, instead of R’s. For example, when you need to fit a linear regression model,
+# instead of using R’s familiar lm() function, you would use Spark’s ml_linear_regression() function.
