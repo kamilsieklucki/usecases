@@ -1,3 +1,7 @@
+# 1. Introduction ----
+# https://therinspark.com/intro.html
+
+# 2. Getting started ----
 # Wymagania: ----
 # 1. Java w wersji 8, sprawdzenie system("java -version")
 # 2. Instalacja pakietu install.packages("sparklyr")
@@ -102,7 +106,7 @@ spark_disconnect(sc)
 # you can also disconnect all your Spark connections by running this command:
 spark_disconnect_all()
 
-# Analysis ----
+# 3. Analysis ----
 # The sparklyr package aids in using the “push compute, collect results” principle. Most of its functions are wrappers on top of Spark API calls.
 # This allows us to take advantage of Spark’s analysis components, instead of R’s. For example, when you need to fit a linear regression model,
 # instead of using R’s familiar lm() function, you would use Spark’s ml_linear_regression() function.
@@ -118,7 +122,7 @@ cars <- copy_to(sc, mtcars)
 # large data transfers should be performed with specialized data transfer tools.
 
 # Wrangle ----
-# 1. dplyr ----
+# 1) dplyr ----
 summarise_all(cars, mean) # summarise(mtcars, across(everything(), mean))
 
 summarize_all(cars, mean) %>%
@@ -129,7 +133,7 @@ cars %>%
   group_by(transmission) %>%
   summarise_all(mean)
 
-# 2. Built-in Functions ----
+# 2) Built-in Functions ----
 # Spark SQL is based on Hive’s SQL conventions and functions, and it is possible to call all these functions using dplyr as well.
 summarise(cars, mpg_percentile = percentile(mpg, 0.25))
 # Przykładowo Spark nie rozpozna funkcji quanitle, bo pochodzi z base: summarise(cars, mpg_percentile = quantile(mpg, 0.25))
@@ -230,3 +234,147 @@ rmarkdown::render("sparklyr_Rmarkdown_example.Rmd")
 # This paradigm should set up a successful approach to data manipulation, visualization and communication through sharing your results in a variety of outputs.
 
 
+# 4. Modeling ----
+# 1) Intro - download data ----
+download.file(
+  "https://github.com/r-spark/okcupid/raw/master/profiles.csv.zip",
+  "okcupid.zip")
+
+unzip("okcupid.zip", exdir = "data")
+unlink("okcupid.zip")
+
+
+# 2) Exploratory Data Analysis ----
+library(sparklyr)
+library(ggplot2)
+library(dbplot)
+library(dplyr)
+
+sc <- spark_connect(master = "local", version = "2.3")
+
+okc <- spark_read_csv(
+  sc, 
+  "data/profiles.csv", 
+  escape = "\"", 
+  memory = FALSE,
+  options = list(multiline = TRUE)
+) %>%
+  mutate(
+    height = as.numeric(height),
+    income = ifelse(income == "-1", NA, as.numeric(income))
+  ) %>%
+  mutate(sex = ifelse(is.na(sex), "missing", sex)) %>%
+  mutate(drinks = ifelse(is.na(drinks), "missing", drinks)) %>%
+  mutate(drugs = ifelse(is.na(drugs), "missing", drugs)) %>%
+  mutate(job = ifelse(is.na(job), "missing", job))
+
+glimpse(okc)
+
+okc <- okc %>%
+  mutate(
+    not_working = ifelse(job %in% c("student", "unemployed", "retired"), 1 , 0)
+  )
+
+okc %>% 
+  group_by(not_working) %>% 
+  tally()
+
+# train, test split
+data_splits <- sdf_random_split(okc, training = 0.8, testing = 0.2, seed = 42)
+okc_train <- data_splits$training
+okc_test <- data_splits$testing
+
+okc_train %>%
+  group_by(not_working) %>%
+  tally() %>%
+  mutate(frac = n / sum(n))
+
+# Using the sdf_describe() function, we can obtain numerical summaries of specific columns:
+sdf_describe(okc_train, cols = c("age", "income"))
+
+dbplot_histogram(okc_train, age)
+
+# Also, unexpected trends can inform variable interactions that you might want to
+# include in the model. As an example, we can explore the religion variable:
+prop_data <- okc_train %>%
+  mutate(religion = regexp_extract(religion, "^\\\\w+", 0)) %>% 
+  group_by(religion, not_working) %>%
+  tally() %>%
+  group_by(religion) %>%
+  summarize(
+    count = sum(n),
+    prop = sum(not_working * n) / sum(n)
+  ) %>%
+  mutate(se = sqrt(prop * (1 - prop) / count)) %>%
+  collect()
+
+prop_data
+
+prop_data %>%
+  ggplot(aes(x = religion, y = prop)) + geom_point(size = 2) +
+  geom_errorbar(aes(ymin = prop - 1.96 * se, ymax = prop + 1.96 * se),
+                width = .1) +
+  geom_hline(yintercept = sum(prop_data$prop * prop_data$count) /
+               sum(prop_data$count))
+
+# Next, we take a look at the relationship between a couple of predictors:
+# alcohol use and drug use. We would expect there to be some correlation between them.
+# You can compute a contingency table via sdf_crosstab():
+contingency_tbl <- okc_train %>% 
+  sdf_crosstab("drinks", "drugs") %>%
+  collect()
+
+contingency_tbl
+
+# We can visualize this contingency table using a mosaic plot (see Figure 4.3):
+library(ggmosaic)
+library(forcats)
+library(tidyr)
+
+contingency_tbl %>%
+  rename(drinks = drinks_drugs) %>%
+  gather("drugs", "count", missing:sometimes) %>%
+  mutate(
+    drinks = as_factor(drinks) %>% 
+      fct_relevel("missing", "not at all", "rarely", "socially", 
+                  "very often", "desperately"),
+    drugs = as_factor(drugs) %>%
+      fct_relevel("missing", "never", "sometimes", "often")
+  ) %>%
+  ggplot() +
+  geom_mosaic(aes(x = product(drinks, drugs), fill = drinks, 
+                  weight = count))
+
+# To further explore the relationship between these two variables, we can
+# perform correspondence analysis using the FactoMineR package.
+dd_obj <- contingency_tbl %>% 
+  tibble::column_to_rownames(var = "drinks_drugs") %>%
+  FactoMineR::CA(graph = FALSE)
+
+dd_drugs <-
+  dd_obj$row$coord %>%
+  as.data.frame() %>%
+  mutate(
+    label = gsub("_", " ", rownames(dd_obj$row$coord)),
+    Variable = "Drugs"
+  )
+
+dd_drinks <-
+  dd_obj$col$coord %>%
+  as.data.frame() %>%
+  mutate(
+    label = gsub("_", " ", rownames(dd_obj$col$coord)),
+    Variable = "Alcohol"
+  )
+
+ca_coord <- rbind(dd_drugs, dd_drinks)
+
+ggplot(ca_coord, aes(x = `Dim 1`, y = `Dim 2`, 
+                     col = Variable)) +
+  geom_vline(xintercept = 0) +
+  geom_hline(yintercept = 0) +
+  geom_text(aes(label = label)) +
+  coord_equal()
+
+
+# 3) Feature Engineering
